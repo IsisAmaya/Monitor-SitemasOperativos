@@ -4,6 +4,8 @@
 #include <arpa/inet.h>
 #include <thread>
 #include <cstring>
+#include <sys/socket.h>
+#include <netinet/in.h>
 
 // Constructor que inicializa el puerto del servidor
 ServidorChat::ServidorChat(int puerto)
@@ -157,4 +159,24 @@ void ServidorChat::enviarDetallesConexion(int descriptorCliente) {
     std::lock_guard<std::mutex> lock(mutexUsuarios);
     std::string detalles = "Número de usuarios conectados: " + std::to_string(usuarios.size()) + "\n";
     send(descriptorCliente, detalles.c_str(), detalles.size(), 0);
+}
+
+void ServidorChat::enviarNumeroUsuariosMonitor() {
+    int udpSocket = socket(AF_INET, SOCK_DGRAM, 0);
+    if (udpSocket == -1) {
+        std::cerr << "Error al crear el socket UDP.\n";
+        return;
+    }
+
+    sockaddr_in direccionMonitor;
+    direccionMonitor.sin_family = AF_INET;
+    direccionMonitor.sin_port = htons(55555); // Puerto para el monitor
+    direccionMonitor.sin_addr.s_addr = inet_addr("127.0.0.1"); // Dirección IP del monitor (localhost)
+
+    std::lock_guard<std::mutex> lock(mutexUsuarios);
+    int numeroUsuarios = usuarios.size();
+    std::string mensaje = "Usuarios conectados: " + std::to_string(numeroUsuarios);
+
+    sendto(udpSocket, mensaje.c_str(), mensaje.size(), 0, (sockaddr*)&direccionMonitor, sizeof(direccionMonitor));
+    close(udpSocket);
 }

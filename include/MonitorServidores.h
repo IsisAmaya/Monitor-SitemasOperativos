@@ -5,5 +5,6 @@
 
 void start_server(int server_id, int port, std::atomic<bool>& server_active);
 void monitor_servers();
+void recibirUsuariosConectados() ;
 
 #endif // MONITORSERVIDORES_H

@@ -12,6 +12,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <memory>  // Para std::shared_ptr
+#include <cstring>
 
 std::vector<std::shared_ptr<std::atomic<bool>>> server_active;
 
@@ -119,5 +120,37 @@ int main(int argc, char* argv[]) {
     monitor_thread.join();
 
     return 0;
+}
+
+void recibirUsuariosConectados() {
+    int udpSocket = socket(AF_INET, SOCK_DGRAM, 0);
+    if (udpSocket == -1) {
+        std::cerr << "Error al crear el socket UDP para recibir.\n";
+        return;
+    }
+
+    sockaddr_in direccionLocal;
+    direccionLocal.sin_family = AF_INET;
+    direccionLocal.sin_port = htons(55555); // Puerto para recibir los datos
+    direccionLocal.sin_addr.s_addr = INADDR_ANY;
+
+    if (bind(udpSocket, (sockaddr*)&direccionLocal, sizeof(direccionLocal)) == -1) {
+        std::cerr << "Error al hacer bind del socket UDP.\n";
+        return;
+    }
+
+    char buffer[1024];
+    sockaddr_in emisorDireccion;
+    socklen_t emisorTamano = sizeof(emisorDireccion);
+
+    while (true) {
+        memset(buffer, 0, sizeof(buffer));
+        ssize_t bytesRecibidos = recvfrom(udpSocket, buffer, 1024, 0, (sockaddr*)&emisorDireccion, &emisorTamano);
+        if (bytesRecibidos > 0) {
+            std::string mensaje(buffer, bytesRecibidos);
+            std::cout << "Mensaje del servidor: " << mensaje << std::endl;
+        }
+    }
+    close(udpSocket);
 }
 
