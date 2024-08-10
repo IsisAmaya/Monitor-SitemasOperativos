@@ -17,6 +17,13 @@ void ServidorChat::iniciar() {
         std::cerr << "Error al crear el socket del servidor.\n";
         return;
     }
+// Configurar SO_REUSEADDR y SO_REUSEPORT
+int opt = 1;
+if (setsockopt(descriptorServidor, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)) == -1) {
+    std::cerr << "Error al configurar el socket con SO_REUSEADDR | SO_REUSEPORT.\n";
+    close(descriptorServidor);
+    return;
+}
 
     sockaddr_in direccionServidor;
     direccionServidor.sin_family = AF_INET;

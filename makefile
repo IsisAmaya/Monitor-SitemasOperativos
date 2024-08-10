@@ -53,7 +53,11 @@ $(MONITOR_TARGET): $(SRC_DIR)/MonitorServidores.cpp $(INCLUDE_DIR)/MonitorServid
 
 # Ejecutar el monitor
 run-monitor: $(MONITOR_TARGET)
-	./$(MONITOR_TARGET)
+	@echo "Ejecutando el monitor..."
+	@read -p "Ingrese la cantidad de servidores: " NUM_SERVERS; \
+	read -p "Ingrese los puertos (separados por espacio): " PORTS; \
+	./$(MONITOR_TARGET) $$NUM_SERVERS $$PORTS
+
 
 # Declarar reglas como phony
 .PHONY: all clean run-servidor run-cliente monitor run-monitor
