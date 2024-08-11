@@ -46,6 +46,13 @@ if (setsockopt(descriptorServidor, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt
 
     std::cout << "Servidor iniciado en el puerto " << puerto << ". Esperando conexiones...\n";
 
+    std::thread([this]() {
+        while (true) {
+            enviarNumeroUsuariosMonitor();
+            std::this_thread::sleep_for(std::chrono::seconds(5));
+        }
+    }).detach();    
+
     // Aceptar conexiones entrantes
     while (true) {
         sockaddr_in direccionCliente;

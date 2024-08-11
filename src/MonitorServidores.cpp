@@ -113,6 +113,9 @@ int main(int argc, char* argv[]) {
     // Iniciar monitoreo
     std::thread monitor_thread(monitor_servers);
 
+    std::thread recibirHilo(recibirUsuariosConectados);
+    recibirHilo.detach();
+
     // Esperar a que los hilos terminen
     for (auto& t : server_threads) {
         t.join();
