@@ -17,6 +17,7 @@ private:
     void enviarListaUsuarios(int descriptorCliente);
     void enviarDetallesConexion(int descriptorCliente);
     void enviarNumeroUsuariosMonitor();
+    void enviarInformacionMonitor();
 
     int puerto;  // Puerto en el que escucha el servidor
     int descriptorServidor;  // Descriptor del socket del servidor

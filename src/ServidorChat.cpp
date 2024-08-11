@@ -48,7 +48,7 @@ if (setsockopt(descriptorServidor, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt
 
     std::thread([this]() {
         while (true) {
-            enviarNumeroUsuariosMonitor();
+            enviarInformacionMonitor();
             std::this_thread::sleep_for(std::chrono::seconds(5));
         }
     }).detach();    
@@ -168,9 +168,10 @@ void ServidorChat::enviarDetallesConexion(int descriptorCliente) {
     send(descriptorCliente, detalles.c_str(), detalles.size(), 0);
 }
 
-void ServidorChat::enviarNumeroUsuariosMonitor() {
-    int udpSocket = socket(AF_INET, SOCK_DGRAM, 0);
-    if (udpSocket == -1) {
+
+void ServidorChat::enviarInformacionMonitor() {
+    int Socket = socket(AF_INET, SOCK_DGRAM, 0);
+    if (Socket == -1) {
         std::cerr << "Error al crear el socket UDP.\n";
         return;
     }
@@ -180,10 +181,27 @@ void ServidorChat::enviarNumeroUsuariosMonitor() {
     direccionMonitor.sin_port = htons(55555); // Puerto para el monitor
     direccionMonitor.sin_addr.s_addr = inet_addr("127.0.0.1"); // Dirección IP del monitor (localhost)
 
+    //Obtener numero de usuarios
     std::lock_guard<std::mutex> lock(mutexUsuarios);
     int numeroUsuarios = usuarios.size();
     std::string mensaje = "Usuarios conectados: " + std::to_string(numeroUsuarios);
 
-    sendto(udpSocket, mensaje.c_str(), mensaje.size(), 0, (sockaddr*)&direccionMonitor, sizeof(direccionMonitor));
-    close(udpSocket);
+    std::string test = "esto es una prueba";
+
+    std::vector<std::string> messages = {mensaje, test};
+
+    // Concatenar las cadenas en un solo buffer con delimitadores
+    std::string mensajesConcatenados;
+    std::string delimiter = "\n"; // Usamos '\n' como delimitador
+    for (const auto& msg : messages) {
+        mensajesConcatenados += msg + delimiter;
+    }
+
+    // Convertir el string concatenado a bytes
+    const char* data = mensajesConcatenados.c_str();
+    size_t data_length = mensajesConcatenados.size();
+
+
+    sendto(Socket, data, data_length, 0, (struct sockaddr*)&direccionMonitor, sizeof(direccionMonitor));
+    close(Socket);
 }

@@ -13,9 +13,11 @@
 #include <arpa/inet.h>
 #include <memory>  // Para std::shared_ptr
 #include <cstring>
+#include <sstream>
 
 std::vector<std::shared_ptr<std::atomic<bool>>> server_active;
 
+// Comprueba si el puerto esta disponible
 bool is_port_available(int port) {
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
@@ -33,6 +35,8 @@ bool is_port_available(int port) {
     return available;
 }
 
+
+// Inicia un servidor en el puerto especificado
 void start_server(int server_id, int port, std::shared_ptr<std::atomic<bool>> server_active) {
     std::string command = "./build/chat servidor " + std::to_string(port);
 
@@ -65,6 +69,7 @@ void start_server(int server_id, int port, std::shared_ptr<std::atomic<bool>> se
     }
 }
 
+// Monitorea los servidores y los reinicia si es necesario
 void monitor_servers() {
     while (true) {
         for (size_t i = 0; i < server_active.size(); ++i) {
@@ -77,6 +82,61 @@ void monitor_servers() {
     }
 }
 
+
+// Recibe mensajes de los servidores
+void recibirInformacionServidor() {
+    int descriptorMonitor = socket(AF_INET, SOCK_DGRAM, 0);
+    if (descriptorMonitor == -1) {
+        std::cerr << "Error al crear el socket para recibir.\n";
+        return;
+    }
+
+    sockaddr_in direccionMonitor;
+    direccionMonitor.sin_family = AF_INET;
+    direccionMonitor.sin_port = htons(55555); // Puerto para recibir los datos
+    direccionMonitor.sin_addr.s_addr = INADDR_ANY;
+
+    if (bind(descriptorMonitor, (sockaddr*)&direccionMonitor, sizeof(direccionMonitor)) == -1) {
+        std::cerr << "Error al hacer bind del socket del monitor.\n";
+        return;
+    }
+
+    char buffer[1024];
+    sockaddr_in emisorDireccion;
+    socklen_t emisorTamano = sizeof(emisorDireccion);
+
+    while (true) {
+        memset(buffer, 0, sizeof(buffer));
+        ssize_t bytesRecibidos = recvfrom(descriptorMonitor, buffer, 1024, 0, (sockaddr*)&emisorDireccion, &emisorTamano);
+        if (bytesRecibidos > 0) {
+            // Null-terminar el buffer recibido
+            buffer[bytesRecibidos] = '\0';
+
+            // Convertir el buffer a std::string
+            std::string received_data(buffer);
+
+            // Separar el string en un array de strings
+            std::vector<std::string> messages;
+            std::istringstream stream(received_data);
+            std::string token;
+            while (std::getline(stream, token, '\n')) {  // Usa el delimitador '\n'
+                if (!token.empty()) {
+                    messages.push_back(token);
+                }
+            }
+
+            // Imprimir los mensajes recibidos
+            for (const auto& msg : messages) {
+                std::cout << "Mensaje recibido: " << msg << std::endl;
+            }
+        }
+    }
+
+    close(descriptorMonitor);
+}
+
+
+//Función principal
 int main(int argc, char* argv[]) {
     if (argc < 3 || (argc - 1) % 2 != 0) {
         std::cerr << "Uso: " << argv[0] << " <num_servidores> <puerto1> ... <puertoN>\n";
@@ -113,7 +173,7 @@ int main(int argc, char* argv[]) {
     // Iniciar monitoreo
     std::thread monitor_thread(monitor_servers);
 
-    std::thread recibirHilo(recibirUsuariosConectados);
+    std::thread recibirHilo(recibirInformacionServidor);
     recibirHilo.detach();
 
     // Esperar a que los hilos terminen
@@ -125,35 +185,5 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-void recibirUsuariosConectados() {
-    int udpSocket = socket(AF_INET, SOCK_DGRAM, 0);
-    if (udpSocket == -1) {
-        std::cerr << "Error al crear el socket UDP para recibir.\n";
-        return;
-    }
 
-    sockaddr_in direccionLocal;
-    direccionLocal.sin_family = AF_INET;
-    direccionLocal.sin_port = htons(55555); // Puerto para recibir los datos
-    direccionLocal.sin_addr.s_addr = INADDR_ANY;
-
-    if (bind(udpSocket, (sockaddr*)&direccionLocal, sizeof(direccionLocal)) == -1) {
-        std::cerr << "Error al hacer bind del socket UDP.\n";
-        return;
-    }
-
-    char buffer[1024];
-    sockaddr_in emisorDireccion;
-    socklen_t emisorTamano = sizeof(emisorDireccion);
-
-    while (true) {
-        memset(buffer, 0, sizeof(buffer));
-        ssize_t bytesRecibidos = recvfrom(udpSocket, buffer, 1024, 0, (sockaddr*)&emisorDireccion, &emisorTamano);
-        if (bytesRecibidos > 0) {
-            std::string mensaje(buffer, bytesRecibidos);
-            std::cout << "Mensaje del servidor: " << mensaje << std::endl;
-        }
-    }
-    close(udpSocket);
-}
 
